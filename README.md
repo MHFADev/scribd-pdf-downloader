@@ -1,59 +1,134 @@
-# Enhanced Vite React TypeScript Template
+# 📄 Scribd PDF Downloader
 
-This template includes built-in detection for missing CSS variables between your Tailwind config and CSS files.
+Aplikasi web untuk mengunduh dokumen dari Scribd ke format PDF secara instant, gratis, dan tanpa registrasi.
 
-## Features
+## 🚀 Features
 
-- **CSS Variable Detection**: Automatically detects if CSS variables referenced in `tailwind.config.cjs` are defined in `src/index.css`
-- **Enhanced Linting**: Includes ESLint, Stylelint, and custom CSS variable validation
-- **Shadcn/ui**: Pre-configured with all Shadcn components
-- **Modern Stack**: Vite + React + TypeScript + Tailwind CSS
+### Core Functionality
+- **6 Download Strategies**: Multiple fallback methods untuk memastikan success rate tinggi
+- **Auto-Retry**: Otomatis mencoba ulang sampai 3x jika download gagal
+- **Real-time Progress**: Progress bar dengan persentase untuk tracking download
+- **Metadata Display**: Menampilkan title, pages, author, dan file size
+- **Cancel Download**: Bisa membatalkan download yang sedang berjalan
 
-## Available Scripts
+### User Experience
+- **URL Validation**: Validasi format URL Scribd sebelum download
+- **Toast Notifications**: Feedback real-time untuk setiap action
+- **Responsive Design**: Bekerja sempurna di desktop, tablet, dan mobile
+- **PDF Validation**: Memastikan file yang didownload adalah PDF valid
+
+### Technical
+- **Modern Stack**: Vite 7 + React 18 + TypeScript
+- **UI Components**: Tailwind CSS + shadcn/ui
+- **Serverless Backend**: Deno function di Blink platform
+- **CORS Enabled**: Secure cross-origin requests
+- **Enhanced Linting**: ESLint + Stylelint + TypeScript checks
+
+## 🛠️ Setup & Installation
+
+### Prerequisites
+- Node.js 18+ atau Bun
+- Git
+
+### Installation
 
 ```bash
-# Run all linting (includes CSS variable check)
-npm run lint
+# Clone repository
+git clone <repository-url>
+cd scribd-pdf-downloader
 
-# Check only CSS variables
-npm run check:css-vars
+# Install dependencies
+bun install
+# atau
+npm install
 
-# Individual linting
-npm run lint:js    # ESLint
-npm run lint:css   # Stylelint
+# Setup environment variables
+cp .env.example .env.local
+
+# Run development server
+bun run dev
+# atau
+npm run dev
 ```
 
-## CSS Variable Detection
+Aplikasi akan berjalan di http://localhost:3000
 
-The template includes a custom script that:
+## 📝 Available Scripts
 
-1. **Parses `tailwind.config.cjs`** to find all `var(--variable)` references
-2. **Parses `src/index.css`** to find all defined CSS variables (`--variable:`)
-3. **Cross-references** them to find missing definitions
-4. **Reports undefined variables** with clear error messages
+```bash
+# Development
+bun run dev          # Start dev server
 
-### Example Output
+# Build
+bun run build        # Build untuk production
+bun run preview      # Preview production build
 
-When CSS variables are missing:
-```
-❌ Undefined CSS variables found in tailwind.config.cjs:
-   --sidebar-background
-   --sidebar-foreground
-   --sidebar-primary
-
-Add these variables to src/index.css
+# Linting & Type Checking
+bun run lint         # Run all checks
+bun run lint:types   # TypeScript type checking
+bun run lint:js      # ESLint
+bun run lint:css     # Stylelint
 ```
 
-When all variables are defined:
+## 🏗️ Architecture
+
+### Frontend (React + TypeScript)
 ```
-✅ All CSS variables in tailwind.config.cjs are defined
+src/
+├── components/
+│   ├── features/
+│   │   └── Downloader.tsx    # Main download component
+│   ├── layout/
+│   │   ├── Navbar.tsx        # Navigation bar
+│   │   └── Footer.tsx        # Footer
+│   └── ui/                   # shadcn/ui components
+├── hooks/                    # Custom React hooks
+├── lib/                      # Utility functions
+└── index.css                 # Global styles + Tailwind
 ```
 
-## How It Works
+### Backend (Deno Serverless Function)
+```
+functions/
+└── scribd-downloader/
+    └── index.ts              # Download logic with 6 strategies
+```
 
-The detection happens during the `npm run lint` command, which will:
-- Exit with error code 1 if undefined variables are found
-- Show exactly which variables need to be added to your CSS file
-- Integrate seamlessly with your development workflow
+### Download Strategies
+Backend mencoba 6 metode berbeda secara berurutan:
 
-This prevents runtime CSS issues where Tailwind classes reference undefined CSS variables.
+1. **Direct Download Endpoint** - Paling umum untuk public docs
+2. **Classic API Endpoint** - Legacy API
+3. **Download Button Endpoint** - Modal download
+4. **Reader Download Parameter** - Reader endpoint
+5. **Embeds Content Endpoint** - Embed endpoint
+6. **Archive Endpoint** - Archive URL
+
+## 🔒 Environment Variables
+
+```env
+# Blink Configuration
+VITE_BLINK_PROJECT_ID=scribd-pdf-downloader-jm4r9t07
+VITE_BLINK_PUBLISHABLE_KEY=blnk_pk_...
+
+# API Endpoint
+VITE_API_URL=https://zy5iy33q--scribd-downloader.functions.blink.new
+```
+
+## 📚 Documentation
+
+- **[USER_GUIDE.md](./USER_GUIDE.md)** - Panduan lengkap untuk pengguna
+- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Panduan deployment
+
+## 🧪 Testing
+
+```bash
+# Type checking
+bun run lint:types
+
+# Build test
+bun run build
+
+# Check if dev server starts
+bun run dev
+```
