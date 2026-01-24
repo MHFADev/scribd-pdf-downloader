@@ -2,6 +2,7 @@ import React from 'react';
 import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
 import { Downloader } from './components/features/Downloader';
+import { Toaster } from 'sonner';
 
 function App() {
   return (
@@ -11,6 +12,7 @@ function App() {
         <Downloader />
       </main>
       <Footer />
+      <Toaster position="top-center" richColors />
     </div>
   );
 }

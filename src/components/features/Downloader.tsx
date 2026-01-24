@@ -1,36 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { FileDown, Loader2, Link as LinkIcon, AlertCircle, CheckCircle2, FileText, Download } from 'lucide-react';
+import { toast } from 'sonner';
+
+const API_URL = 'https://zy5iy33q--scribd-downloader.functions.blink.new';
 
 export function Downloader() {
   const [url, setUrl] = useState('');
-  const [status, setStatus] = useState<'idle' | 'analyzing' | 'processing' | 'completed' | 'error'>('idle');
+  const [status, setStatus] = useState<'idle' | 'downloading' | 'completed' | 'error'>('idle');
   const [progress, setProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
   const [docInfo, setDocInfo] = useState<{ title: string; pages: number } | null>(null);
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
 
-  const simulateProgress = () => {
-    setProgress(0);
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 90) {
-          clearInterval(interval);
-          return 90;
-        }
-        return prev + Math.random() * 10;
-      });
-    }, 500);
-    return interval;
-  };
-
-  const handleAnalyze = async (e: React.FormEvent) => {
+  const handleDownload = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
     setDocInfo(null);
+    setPdfBlob(null);
+    setProgress(0);
     
     if (!url.includes('scribd.com/document/')) {
       setStatus('error');
@@ -38,37 +30,88 @@ export function Downloader() {
       return;
     }
 
-    setStatus('analyzing');
+    setStatus('downloading');
     
-    // Simulate API call
-    setTimeout(() => {
-      setStatus('processing');
-      const progressInterval = simulateProgress();
-      
-      // Extract rough title from URL if possible
-      const match = url.match(/\/document\/\d+\/(.+)/);
-      const title = match ? match[1].replace(/-/g, ' ') : 'Scribd Document';
-      
-      setTimeout(() => {
-        clearInterval(progressInterval);
-        setProgress(100);
-        setDocInfo({
-            title: title.charAt(0).toUpperCase() + title.slice(1),
-            pages: Math.floor(Math.random() * 50) + 10
+    // Simulate progress
+    const progressInterval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 90) return 90;
+        return prev + 5;
+      });
+    }, 200);
+
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url }),
+      });
+
+      clearInterval(progressInterval);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        setStatus('error');
+        setErrorMsg(errorData.error || 'Failed to download document');
+        
+        // If we have metadata despite the error, show it
+        if (errorData.metadata) {
+          setDocInfo(errorData.metadata);
+        }
+        
+        toast.error('Download failed', {
+          description: errorData.error || 'Unable to download the document',
         });
+        return;
+      }
+
+      // Check if response is PDF
+      const contentType = response.headers.get('content-type');
+      if (contentType?.includes('application/pdf')) {
+        const blob = await response.blob();
+        setPdfBlob(blob);
+        
+        // Extract title from Content-Disposition header
+        const disposition = response.headers.get('content-disposition');
+        const filenameMatch = disposition?.match(/filename="?(.+?)"?$/);
+        const filename = filenameMatch ? filenameMatch[1] : 'document.pdf';
+        
+        setDocInfo({
+          title: filename.replace('.pdf', '').replace(/_/g, ' '),
+          pages: 0, // We don't know the exact page count from the blob
+        });
+        
+        setProgress(100);
         setStatus('completed');
-      }, 3000);
-    }, 1500);
+        
+        toast.success('Download completed!', {
+          description: 'Your PDF is ready to save',
+        });
+      } else {
+        const errorData = await response.json();
+        setStatus('error');
+        setErrorMsg(errorData.error || 'Received non-PDF response');
+        toast.error('Download failed', {
+          description: 'The server did not return a PDF file',
+        });
+      }
+    } catch (error) {
+      clearInterval(progressInterval);
+      setStatus('error');
+      const message = error instanceof Error ? error.message : 'Network error occurred';
+      setErrorMsg(message);
+      toast.error('Connection failed', {
+        description: message,
+      });
+    }
   };
 
   const downloadFile = () => {
-    if (!docInfo) return;
+    if (!pdfBlob || !docInfo) return;
     
-    // Create a dummy PDF file
-    const content = `Title: ${docInfo.title}\n\nThis is a simulated PDF download for demonstration purposes.\nOriginal Source: ${url}\n\nDownloaded via ScribdDL by MHFADev.`;
-    const blob = new Blob([content], { type: 'application/pdf' });
-    const downloadUrl = URL.createObjectURL(blob);
-    
+    const downloadUrl = URL.createObjectURL(pdfBlob);
     const a = document.createElement('a');
     a.href = downloadUrl;
     a.download = `${docInfo.title.replace(/\s+/g, '_')}.pdf`;
@@ -76,6 +119,10 @@ export function Downloader() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(downloadUrl);
+    
+    toast.success('File saved!', {
+      description: 'PDF has been downloaded to your device',
+    });
   };
 
   const reset = () => {
@@ -83,6 +130,8 @@ export function Downloader() {
     setStatus('idle');
     setProgress(0);
     setDocInfo(null);
+    setPdfBlob(null);
+    setErrorMsg('');
   };
 
   return (
@@ -102,7 +151,7 @@ export function Downloader() {
           <CardDescription>Paste the Scribd document URL below to start.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleAnalyze} className="space-y-4">
+          <form onSubmit={handleDownload} className="space-y-4">
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <LinkIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -111,16 +160,16 @@ export function Downloader() {
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   className="pl-9 h-10"
-                  disabled={status === 'analyzing' || status === 'processing'}
+                  disabled={status === 'downloading'}
                 />
               </div>
-              <Button type="submit" disabled={!url || status === 'analyzing' || status === 'processing'}>
-                {status === 'analyzing' ? (
+              <Button type="submit" disabled={!url || status === 'downloading'}>
+                {status === 'downloading' ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
                   <FileDown className="mr-2 h-4 w-4" />
                 )}
-                {status === 'analyzing' ? 'Analyzing...' : 'Download'}
+                {status === 'downloading' ? 'Downloading...' : 'Download'}
               </Button>
             </div>
           </form>
@@ -133,11 +182,11 @@ export function Downloader() {
             </Alert>
           )}
 
-          {(status === 'processing' || status === 'completed') && (
+          {(status === 'downloading' || (status === 'completed' && progress < 100)) && (
             <div className="mt-6 space-y-4">
               <div className="space-y-2">
                 <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>Processing document...</span>
+                  <span>Downloading document from Scribd...</span>
                   <span>{Math.round(progress)}%</span>
                 </div>
                 <Progress value={progress} className="h-2" />
