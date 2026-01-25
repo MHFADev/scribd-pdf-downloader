@@ -34,5 +34,6 @@
     }
   },
   "include": ["src"],
+  "exclude": ["src/main.ts", "src/counter.ts", "src/style.css"],
   "references": [{ "path": "./tsconfig.node.json" }]
 } 
